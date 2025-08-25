@@ -86,9 +86,9 @@
     const clickX = event.clientX - rect.left - 60 // Account for timeline padding
     const clickedDate = positionToDate(clickX, startDate, endDate, timelineWidth)
     
-    // Constrain to timeline bounds
+    // Constrain to timeline bounds and set to noon to avoid timezone issues
     if (clickedDate >= startDate && clickedDate <= endDate) {
-      selectedDate = clickedDate
+      selectedDate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), clickedDate.getDate(), 12, 0, 0)
     }
   }
   
@@ -128,6 +128,7 @@
   // Reactive declarations for store values
   let hasSubmittedValue = false
   let predictionsValue = []
+  let selectedDateString = ''
   
   $: hasSubmitted.subscribe(value => {
     hasSubmittedValue = value
@@ -137,15 +138,28 @@
     predictionsValue = value
   })
   
+  // Update input when selectedDate changes (but not the other way around)
+  $: if (selectedDate) {
+    selectedDateString = selectedDate.toISOString().split('T')[0]
+  }
+  
   function resetPrediction() {
     selectedDate = null
+    selectedDateString = ''
+  }
+  
+  function handleDateInput(event) {
+    const inputDate = event.target.value
+    if (inputDate) {
+      selectedDate = new Date(inputDate + 'T12:00:00') // Set to noon to avoid timezone issues
+    }
   }
 </script>
 
 <div class="container">
   <div class="header">
-    <h1>When Will He Die?</h1>
-    <p class="subtitle">In Minecraft</p>
+    <h1>Timeline Prediction Challenge</h1>
+    <p class="subtitle">When do you think the event will happen? Make your prediction!</p>
   </div>
   
   {#if !hasSubmittedValue}
@@ -209,7 +223,17 @@
         {#if selectedDate}
           <div class="selected-date">
             <p>Selected: <strong>{formatDate(selectedDate)}</strong></p>
-            <button class="reset-btn" on:click={resetPrediction}>Choose Different Date</button>
+            <div class="date-controls">
+              <input 
+                type="date" 
+                value={selectedDateString}
+                on:change={handleDateInput}
+                min={startDate.toISOString().split('T')[0]}
+                max={endDate.toISOString().split('T')[0]}
+                class="date-input"
+              />
+              <button class="reset-btn" on:click={resetPrediction}>Choose Different Date</button>
+            </div>
           </div>
         {/if}
       </div>
@@ -252,12 +276,12 @@
           {#each predictionsValue as prediction, index}
             <div 
               class="prediction-marker"
-              style="left: {dateToPosition(new Date(prediction.prediction_date), startDate, endDate, timelineWidth) + 60}px; top: {70 + (index % 3) * 40}px"
+              style="left: {dateToPosition(new Date(prediction.prediction_date + 'T12:00:00'), startDate, endDate, timelineWidth) + 60}px; top: {70 + (index % 3) * 40}px"
             >
               <div class="marker-dot"></div>
               <div class="marker-label">
                 <div class="name">{prediction.name}</div>
-                <div class="date">{formatDate(prediction.prediction_date)}</div>
+                <div class="date">{formatDate(new Date(prediction.prediction_date + 'T12:00:00'))}</div>
               </div>
             </div>
           {/each}
@@ -541,6 +565,30 @@
     border-radius: 12px;
     border: 1px solid #fecaca;
     animation: fadeInUp 0.5s ease;
+  }
+  
+  .date-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+  }
+  
+  .date-input {
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: white;
+    transition: border-color 0.2s;
+    min-width: 140px;
+  }
+  
+  .date-input:focus {
+    outline: none;
+    border-color: #667eea;
   }
   
   @keyframes fadeInUp {
