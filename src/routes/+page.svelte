@@ -358,7 +358,7 @@
                 id="arrow-{pos.id}"
               />
               <polygon 
-                points="{pos.x-4},{endY-8} {pos.x+4},{endY-8} {pos.x},{endY}"
+                points="{pos.x-4},{endY-5} {pos.x+4},{endY-5} {pos.x},{endY+3}"
                 class="arrow-head"
               />
             {/each}
