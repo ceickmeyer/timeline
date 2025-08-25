@@ -158,8 +158,8 @@
 
 <div class="container">
   <div class="header">
-    <h1>Timeline Prediction Challenge</h1>
-    <p class="subtitle">When do you think the event will happen? Make your prediction!</p>
+    <h1>When Will He Die?</h1>
+    <p class="subtitle">In Minecraft</p>
   </div>
   
   {#if !hasSubmittedValue}
