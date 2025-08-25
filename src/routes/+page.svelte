@@ -14,7 +14,7 @@
   
   // Timeline bounds
   const startDate = new Date()
-  const endDate = new Date('2028-11-30')
+  const endDate = new Date('2029-01-20') // Presidential inauguration date
   
   // Initialize session
   onMount(() => {
@@ -32,7 +32,7 @@
     // Set timeline width based on container with a slight delay for proper sizing
     setTimeout(() => {
       if (timelineContainer) {
-        timelineWidth = timelineContainer.offsetWidth - 100
+        timelineWidth = timelineContainer.offsetWidth - 120 // Account for timeline padding
       }
     }, 100)
   })
@@ -83,7 +83,7 @@
     if (hasSubmittedValue) return
     
     const rect = event.currentTarget.getBoundingClientRect()
-    const clickX = event.clientX - rect.left - 50 // Account for padding
+    const clickX = event.clientX - rect.left - 60 // Account for timeline padding
     const clickedDate = positionToDate(clickX, startDate, endDate, timelineWidth)
     
     // Constrain to timeline bounds
@@ -144,8 +144,8 @@
 
 <div class="container">
   <div class="header">
-    <h1>Timeline Prediction Challenge</h1>
-    <p class="subtitle">When do you think the event will happen? Make your prediction!</p>
+    <h1>When Will He Die?</h1>
+    <p class="subtitle">In Minecraft</p>
   </div>
   
   {#if !hasSubmittedValue}
@@ -165,23 +165,27 @@
         <h3>Click on the timeline to make your prediction:</h3>
         <div class="timeline-info">
           <span>Today: {formatDate(startDate)}</span>
-          <span>Target: November 2028</span>
+          <span>Target: January 20, 2029</span>
         </div>
         
         <div 
           class="timeline-container" 
           bind:this={timelineContainer}
           on:click={handleTimelineClick}
+          on:keydown={(e) => e.key === 'Enter' && handleTimelineClick(e)}
+          role="button"
+          tabindex="0"
+          aria-label="Click to select a date on the timeline"
         >
           <div class="timeline">
             <div class="timeline-track"></div>
             
             <!-- Year markers -->
             {#each Array.from({length: 5}, (_, i) => new Date(startDate.getFullYear() + i, 0, 1)) as yearDate}
-              {#if yearDate <= endDate}
+              {#if yearDate <= endDate && yearDate > startDate}
                 <div 
                   class="year-marker"
-                  style="left: {dateToPosition(yearDate, startDate, endDate, timelineWidth) + 50}px"
+                  style="left: {dateToPosition(yearDate, startDate, endDate, timelineWidth) + 60}px; transform: translateX(-50%);"
                 >
                   <div class="year-line"></div>
                   <div class="year-label">{yearDate.getFullYear()}</div>
@@ -193,7 +197,7 @@
             {#if selectedDate}
               <div 
                 class="prediction-marker user-prediction"
-                style="left: {dateToPosition(selectedDate, startDate, endDate, timelineWidth) + 50}px"
+                style="left: {dateToPosition(selectedDate, startDate, endDate, timelineWidth) + 60}px"
               >
                 <div class="marker-dot"></div>
                 <div class="marker-label">{formatDate(selectedDate)}</div>
@@ -233,10 +237,10 @@
           
           <!-- Year markers -->
           {#each Array.from({length: 5}, (_, i) => new Date(startDate.getFullYear() + i, 0, 1)) as yearDate}
-            {#if yearDate <= endDate}
+            {#if yearDate <= endDate && yearDate > startDate}
               <div 
                 class="year-marker"
-                style="left: {dateToPosition(yearDate, startDate, endDate, timelineWidth) + 50}px"
+                style="left: {dateToPosition(yearDate, startDate, endDate, timelineWidth) + 60}px; transform: translateX(-50%);"
               >
                 <div class="year-line"></div>
                 <div class="year-label">{yearDate.getFullYear()}</div>
@@ -248,7 +252,7 @@
           {#each predictionsValue as prediction, index}
             <div 
               class="prediction-marker"
-              style="left: {dateToPosition(new Date(prediction.prediction_date), startDate, endDate, timelineWidth) + 50}px; top: {60 + (index % 3) * 40}px"
+              style="left: {dateToPosition(new Date(prediction.prediction_date), startDate, endDate, timelineWidth) + 60}px; top: {70 + (index % 3) * 40}px"
             >
               <div class="marker-dot"></div>
               <div class="marker-label">
@@ -270,34 +274,45 @@
 
 <style>
   .container {
-    max-width: 1000px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 40px 20px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
   }
   
   .header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 50px;
+    color: white;
   }
   
   .header h1 {
-    color: #2563eb;
-    margin-bottom: 10px;
-    font-size: 2.5rem;
+    color: white;
+    margin-bottom: 16px;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    letter-spacing: -0.02em;
   }
   
   .subtitle {
-    color: #64748b;
-    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    font-weight: 400;
+    max-width: 600px;
+    margin: 0 auto;
   }
   
   .prediction-form {
-    background: white;
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 30px;
   }
   
   .name-input {
@@ -341,17 +356,21 @@
   
   .timeline-container {
     position: relative;
-    height: 200px;
-    margin: 20px 0;
+    height: 220px;
+    margin: 30px 0;
     cursor: crosshair;
-    background: #f8fafc;
-    border-radius: 8px;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 16px;
     border: 2px dashed #cbd5e1;
-    transition: border-color 0.2s;
+    transition: all 0.3s ease;
+    overflow: hidden;
   }
   
   .timeline-container:hover {
-    border-color: #2563eb;
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   }
   
   .timeline {
@@ -362,70 +381,141 @@
   
   .timeline-track {
     position: absolute;
-    top: 40px;
-    left: 50px;
-    right: 50px;
-    height: 4px;
-    background: #2563eb;
-    border-radius: 2px;
+    top: 53px;
+    left: 60px;
+    right: 60px;
+    height: 6px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
   
   .year-marker {
     position: absolute;
-    top: 35px;
+    top: 48px;
   }
   
   .year-line {
-    width: 2px;
-    height: 14px;
-    background: #64748b;
-    margin-bottom: 5px;
+    width: 3px;
+    height: 16px;
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    margin: 0 auto 8px auto;
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
   
   .year-label {
-    font-size: 0.8rem;
-    color: #64748b;
+    font-size: 0.85rem;
+    color: #475569;
     text-align: center;
-    margin-left: -15px;
-    width: 30px;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  }
+  
+  .today-marker, .end-marker {
+    position: absolute;
+    top: 30px;
+  }
+  
+  .today-dot, .end-dot {
+    width: 12px;
+    height: 12px;
+    border: 2px solid white;
+    border-radius: 50%;
+    margin: 8px auto 0 auto;
+    transform: translateY(17px);
+  }
+  
+  .today-dot {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+    animation: todayPulse 3s infinite;
+  }
+  
+  .end-dot {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  }
+  
+  @keyframes todayPulse {
+    0%, 100% { transform: translateY(17px) scale(1); opacity: 1; }
+    50% { transform: translateY(17px) scale(1.1); opacity: 0.8; }
+  }
+  
+  .today-label, .end-label {
+    font-size: 0.7rem;
+    text-align: center;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
+    margin-bottom: 8px;
+  }
+  
+  .today-label {
+    color: #16a34a;
+  }
+  
+  .end-label {
+    color: #d97706;
   }
   
   .prediction-marker {
     position: absolute;
     transform: translateX(-50%);
+    z-index: 10;
+    top: 53px;
   }
   
   .user-prediction .marker-dot {
-    width: 16px;
-    height: 16px;
-    background: #dc2626;
+    width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     border: 3px solid white;
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    margin-bottom: 8px;
-    transform: translateY(-6px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    margin: 0 auto 8px auto;
+    transform: translateY(-9px);
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { transform: translateY(-9px) scale(1); }
+    50% { transform: translateY(-9px) scale(1.1); }
   }
   
   .prediction-marker:not(.user-prediction) .marker-dot {
-    width: 12px;
-    height: 12px;
-    background: #059669;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     border: 2px solid white;
     border-radius: 50%;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    margin-bottom: 5px;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    margin: 0 auto 5px auto;
     transform: translateY(-4px);
+    transition: all 0.3s ease;
+  }
+  
+  .prediction-marker:not(.user-prediction):hover .marker-dot {
+    transform: translateY(-4px) scale(1.2);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
   }
   
   .marker-label {
-    background: white;
-    padding: 6px 10px;
-    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    padding: 8px 12px;
+    border-radius: 8px;
     font-size: 0.8rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     text-align: center;
-    min-width: 80px;
+    min-width: 90px;
+    transition: all 0.3s ease;
+  }
+  
+  .prediction-marker:not(.user-prediction) .marker-label:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
   }
   
   .user-prediction .marker-label {
@@ -445,78 +535,127 @@
   
   .selected-date {
     text-align: center;
-    margin: 20px 0;
-    padding: 15px;
-    background: #fef2f2;
-    border-radius: 8px;
+    margin: 30px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-radius: 12px;
     border: 1px solid #fecaca;
+    animation: fadeInUp 0.5s ease;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   
   .reset-btn {
-    background: #6b7280;
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
     color: white;
     border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 8px 16px;
+    border-radius: 8px;
     font-size: 0.8rem;
     cursor: pointer;
-    margin-left: 10px;
-    transition: background-color 0.2s;
+    margin-left: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
   
   .reset-btn:hover {
-    background: #4b5563;
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
   
   .submit-btn {
     width: 100%;
-    background: #2563eb;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    padding: 16px;
-    border-radius: 8px;
+    padding: 18px 24px;
+    border-radius: 12px;
     font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
-    margin-top: 20px;
-    transition: all 0.2s;
+    margin-top: 30px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 14px 0 rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .submit-btn:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
   }
   
   .submit-btn:hover:not(:disabled) {
-    background: #1d4ed8;
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px 0 rgba(102, 126, 234, 0.4);
+  }
+  
+  .submit-btn:hover:not(:disabled):before {
+    left: 100%;
+  }
+  
+  .submit-btn:active:not(:disabled) {
+    transform: translateY(0);
   }
   
   .submit-btn:disabled {
     background: #9ca3af;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
   }
   
   .results-section {
-    background: white;
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
   .results-section h2 {
-    color: #059669;
+    color: #10b981;
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 16px;
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    font-weight: 700;
   }
   
   .results-subtitle {
     text-align: center;
     color: #64748b;
-    margin-bottom: 30px;
+    margin-bottom: 40px;
+    font-size: 1.1rem;
   }
   
   .results-section .timeline-container {
-    height: 250px;
+    height: 280px;
     cursor: default;
     border-style: solid;
+    border-color: #e2e8f0;
+  }
+  
+  .results-section .timeline-container:hover {
+    transform: none;
+    border-color: #e2e8f0;
   }
   
   .stats {
