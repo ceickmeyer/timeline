@@ -9,8 +9,10 @@
   let selectedDate = null
   let showPredictions = false
   let timelineContainer
+  let resultsTimelineContainer
   let timelineWidth = 800
   let isSubmitting = false
+  let viewResultsClicked = false
   
   // Timeline bounds
   const startDate = new Date()
@@ -33,6 +35,9 @@
     setTimeout(() => {
       if (timelineContainer) {
         timelineWidth = timelineContainer.offsetWidth - 120 // Account for timeline padding
+      }
+      if (resultsTimelineContainer) {
+        timelineWidth = resultsTimelineContainer.offsetWidth - 120
       }
     }, 100)
   })
@@ -125,10 +130,66 @@
     isSubmitting = false
   }
   
+  // Calculate non-overlapping positions for prediction labels
+  function calculateLabelPositions(predictionsArray) {
+    const sorted = [...predictionsArray].sort((a, b) => 
+      new Date(a.prediction_date) - new Date(b.prediction_date)
+    )
+    
+    const labelWidth = 120
+    const labelHeight = 50
+    const minGap = 10
+    const baseY = 80
+    const positions = []
+    
+    sorted.forEach(prediction => {
+      const x = dateToPosition(
+        new Date(prediction.prediction_date + 'T12:00:00'),
+        startDate, endDate, timelineWidth
+      ) + 60
+      
+      let y = baseY
+      let placed = false
+      let testY = baseY
+      
+      // Find non-overlapping Y position
+      while (!placed && testY < 300) {
+        let collision = false
+        
+        for (let pos of positions) {
+          const xDiff = Math.abs(x - pos.x)
+          const yDiff = Math.abs(testY - pos.y)
+          
+          if (xDiff < labelWidth && yDiff < labelHeight + minGap) {
+            collision = true
+            break
+          }
+        }
+        
+        if (!collision) {
+          y = testY
+          placed = true
+        } else {
+          testY += labelHeight + minGap
+        }
+      }
+      
+      positions.push({ 
+        prediction, 
+        x, 
+        y,
+        id: prediction.id || `${prediction.name}-${prediction.prediction_date}`
+      })
+    })
+    
+    return positions
+  }
+  
   // Reactive declarations for store values
   let hasSubmittedValue = false
   let predictionsValue = []
   let selectedDateString = ''
+  let labelPositions = []
   
   $: hasSubmitted.subscribe(value => {
     hasSubmittedValue = value
@@ -137,6 +198,8 @@
   $: predictions.subscribe(value => {
     predictionsValue = value
   })
+  
+  $: labelPositions = calculateLabelPositions(predictionsValue)
   
   // Update input when selectedDate changes (but not the other way around)
   $: if (selectedDate) {
@@ -154,6 +217,11 @@
       selectedDate = new Date(inputDate + 'T12:00:00') // Set to noon to avoid timezone issues
     }
   }
+  
+  function viewResults() {
+    viewResultsClicked = true
+    loadPredictions()
+  }
 </script>
 
 <div class="container">
@@ -162,7 +230,7 @@
     <p class="subtitle">In Minecraft</p>
   </div>
   
-  {#if !hasSubmittedValue}
+  {#if !hasSubmittedValue && !viewResultsClicked}
     <div class="prediction-form">
       <div class="name-input">
         <label for="name">Your Name:</label>
@@ -179,7 +247,7 @@
         <h3>Click on the timeline to make your prediction:</h3>
         <div class="timeline-info">
           <span>Today: {formatDate(startDate)}</span>
-          <span>Target: January 20, 2029</span>
+          <span>End Date: January 20, 2029</span>
         </div>
         
         <div 
@@ -249,13 +317,17 @@
           Submit Prediction
         {/if}
       </button>
+      
+      <div class="view-results-link">
+        <button class="link-button" on:click={viewResults}>
+          View results without voting →
+        </button>
+      </div>
     </div>
   {:else}
     <div class="results-section">
-      <h2>All Predictions</h2>
-      <p class="results-subtitle">Here's what everyone predicted:</p>
       
-      <div class="timeline-container">
+      <div class="timeline-container results-timeline" bind:this={resultsTimelineContainer}>
         <div class="timeline">
           <div class="timeline-track"></div>
           
@@ -272,25 +344,63 @@
             {/if}
           {/each}
           
-          <!-- All predictions -->
-          {#each predictionsValue as prediction, index}
+          <!-- SVG for arrows -->
+          <svg class="arrows-svg">
+            {#each labelPositions as pos, index}
+              {@const startY = pos.y + 45}
+              {@const endY = 370}
+              {@const controlX = pos.x + (index % 2 === 0 ? -20 : 20)}
+              {@const controlY = (startY + endY) / 2}
+              
+              <path 
+                d="M {pos.x} {startY} Q {controlX} {controlY} {pos.x} {endY}"
+                class="arrow-line"
+                id="arrow-{pos.id}"
+              />
+              <polygon 
+                points="{pos.x-4},{endY-8} {pos.x+4},{endY-8} {pos.x},{endY}"
+                class="arrow-head"
+              />
+            {/each}
+          </svg>
+          
+          <!-- Prediction labels -->
+          {#each labelPositions as pos}
             <div 
-              class="prediction-marker"
-              style="left: {dateToPosition(new Date(prediction.prediction_date + 'T12:00:00'), startDate, endDate, timelineWidth) + 60}px; top: {70 + (index % 3) * 40}px"
+              class="prediction-label"
+              style="left: {pos.x - 60}px; top: {pos.y}px"
+              on:mouseenter={() => {
+                const arrow = document.querySelector(`#arrow-${pos.id}`)
+                if (arrow) {
+                  arrow.style.stroke = '#059669'
+                  arrow.style.strokeWidth = '3'
+                  arrow.style.opacity = '1'
+                }
+              }}
+              on:mouseleave={() => {
+                const arrow = document.querySelector(`#arrow-${pos.id}`)
+                if (arrow) {
+                  arrow.style.stroke = '#10b981'
+                  arrow.style.strokeWidth = '2'
+                  arrow.style.opacity = '0.6'
+                }
+              }}
             >
-              <div class="marker-dot"></div>
-              <div class="marker-label">
-                <div class="name">{prediction.name}</div>
-                <div class="date">{formatDate(new Date(prediction.prediction_date + 'T12:00:00'))}</div>
-              </div>
+              <div class="label-name">{pos.prediction.name}</div>
+              <div class="label-date">{formatDate(new Date(pos.prediction.prediction_date + 'T12:00:00'))}</div>
             </div>
+            
+            <!-- Point on timeline -->
+            <div 
+              class="timeline-point"
+              style="left: {pos.x}px"
+            />
           {/each}
         </div>
       </div>
       
       <div class="stats">
         <p><strong>Total Predictions:</strong> {predictionsValue.length}</p>
-        <p class="note">When the event occurs, we'll determine who came closest!</p>
       </div>
     </div>
   {/if}
@@ -436,53 +546,6 @@
     text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
   }
   
-  .today-marker, .end-marker {
-    position: absolute;
-    top: 30px;
-  }
-  
-  .today-dot, .end-dot {
-    width: 12px;
-    height: 12px;
-    border: 2px solid white;
-    border-radius: 50%;
-    margin: 8px auto 0 auto;
-    transform: translateY(17px);
-  }
-  
-  .today-dot {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
-    animation: todayPulse 3s infinite;
-  }
-  
-  .end-dot {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
-  }
-  
-  @keyframes todayPulse {
-    0%, 100% { transform: translateY(17px) scale(1); opacity: 1; }
-    50% { transform: translateY(17px) scale(1.1); opacity: 0.8; }
-  }
-  
-  .today-label, .end-label {
-    font-size: 0.7rem;
-    text-align: center;
-    font-weight: 700;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-    white-space: nowrap;
-    margin-bottom: 8px;
-  }
-  
-  .today-label {
-    color: #16a34a;
-  }
-  
-  .end-label {
-    color: #d97706;
-  }
-  
   .prediction-marker {
     position: absolute;
     transform: translateX(-50%);
@@ -507,23 +570,6 @@
     50% { transform: translateY(-9px) scale(1.1); }
   }
   
-  .prediction-marker:not(.user-prediction) .marker-dot {
-    width: 14px;
-    height: 14px;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    border: 2px solid white;
-    border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-    margin: 0 auto 5px auto;
-    transform: translateY(-4px);
-    transition: all 0.3s ease;
-  }
-  
-  .prediction-marker:not(.user-prediction):hover .marker-dot {
-    transform: translateY(-4px) scale(1.2);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
-  }
-  
   .marker-label {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
@@ -537,24 +583,9 @@
     transition: all 0.3s ease;
   }
   
-  .prediction-marker:not(.user-prediction) .marker-label:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-  }
-  
   .user-prediction .marker-label {
     color: #dc2626;
     font-weight: 600;
-  }
-  
-  .prediction-marker:not(.user-prediction) .marker-label .name {
-    font-weight: 600;
-    color: #374151;
-  }
-  
-  .prediction-marker:not(.user-prediction) .marker-label .date {
-    color: #64748b;
-    font-size: 0.7rem;
   }
   
   .selected-date {
@@ -695,15 +726,125 @@
   }
   
   .results-section .timeline-container {
-    height: 280px;
+    height: 450px;
     cursor: default;
     border-style: solid;
     border-color: #e2e8f0;
+    overflow: visible;
+    position: relative;
   }
   
   .results-section .timeline-container:hover {
     transform: none;
     border-color: #e2e8f0;
+  }
+  
+  .results-timeline .timeline-track {
+    position: absolute;
+    bottom: 80px;
+    left: 60px;
+    right: 60px;
+    top: auto;
+    height: 6px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .results-timeline .year-marker {
+    position: absolute;
+    top: auto;
+    bottom: 55px;
+  }
+  
+  .results-timeline .year-line {
+    width: 3px;
+    height: 16px;
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    margin: 8px auto 0 auto;
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .results-timeline .year-label {
+    font-size: 0.85rem;
+    color: #475569;
+    text-align: center;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    margin-top: 4px;
+  }
+  
+  /* SVG for arrows */
+  .arrows-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+  }
+  
+  .arrow-line {
+    stroke: #10b981;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+  }
+  
+  .arrow-head {
+    fill: #10b981;
+    opacity: 0.8;
+  }
+  
+  /* Prediction labels in results */
+  .prediction-label {
+    position: absolute;
+    background: white;
+    border-radius: 8px;
+    padding: 8px 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 2px solid #10b981;
+    z-index: 10;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    min-width: 100px;
+    text-align: center;
+  }
+  
+  .prediction-label:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    border-color: #059669;
+    z-index: 20;
+  }
+  
+  .label-name {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+  }
+  
+  .label-date {
+    color: #64748b;
+    font-size: 0.75rem;
+    margin-top: 2px;
+  }
+  
+  /* Timeline points */
+  .timeline-point {
+    position: absolute;
+    bottom: 77px;
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border: 2px solid white;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
   
   .stats {
@@ -717,5 +858,30 @@
     color: #64748b;
     font-style: italic;
     margin-top: 10px;
+  }
+  
+  /* View results link */
+  .view-results-link {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+  }
+  
+  .link-button {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  
+  .link-button:hover {
+    color: #667eea;
+    transform: translateX(2px);
   }
 </style>
