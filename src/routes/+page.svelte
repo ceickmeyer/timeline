@@ -6,10 +6,10 @@
   import { browser } from '$app/environment'
 
   let name = ''
-  let selectedDate = null
+  let selectedDate: Date | null = null
   let showPredictions = false
-  let timelineContainer
-  let resultsTimelineContainer
+  let timelineContainer: HTMLElement | null = null
+  let resultsTimelineContainer: HTMLElement | null = null
   let timelineWidth = 800
   let isSubmitting = false
   let viewResultsClicked = false
@@ -46,7 +46,7 @@
     if (!browser) return
     
     const session = userSession
-    let sessionValue
+    let sessionValue: string | null = null
     const unsubscribe = session.subscribe(value => {
       sessionValue = value
     })
@@ -78,8 +78,8 @@
     }
   }
   
-  function handleTimelineClick(event) {
-    let hasSubmittedValue
+  function handleTimelineClick(event: MouseEvent) {
+    let hasSubmittedValue = false
     const unsubscribe = hasSubmitted.subscribe(value => {
       hasSubmittedValue = value
     })
@@ -87,7 +87,7 @@
     
     if (hasSubmittedValue) return
     
-    const rect = event.currentTarget.getBoundingClientRect()
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
     const clickX = event.clientX - rect.left - 60 // Account for timeline padding
     const clickedDate = positionToDate(clickX, startDate, endDate, timelineWidth)
     
@@ -100,7 +100,7 @@
   async function submitPrediction() {
     if (!name.trim() || !selectedDate) return
     
-    let sessionValue
+    let sessionValue: string | null = null
     const unsubscribe = userSession.subscribe(value => {
       sessionValue = value
     })
@@ -130,17 +130,32 @@
     isSubmitting = false
   }
   
+  // Define types for prediction data
+  interface Prediction {
+    id?: string
+    name: string
+    prediction_date: string
+    user_session?: string
+  }
+  
+  interface LabelPosition {
+    prediction: Prediction
+    x: number
+    y: number
+    id: string
+  }
+  
   // Calculate non-overlapping positions for prediction labels
-  function calculateLabelPositions(predictionsArray) {
+  function calculateLabelPositions(predictionsArray: Prediction[]): LabelPosition[] {
     const sorted = [...predictionsArray].sort((a, b) => 
-      new Date(a.prediction_date) - new Date(b.prediction_date)
+      new Date(a.prediction_date).getTime() - new Date(b.prediction_date).getTime()
     )
     
     const labelWidth = 120
     const labelHeight = 50
     const minGap = 10
     const baseY = 80
-    const positions = []
+    const positions: LabelPosition[] = []
     
     sorted.forEach(prediction => {
       const x = dateToPosition(
@@ -187,9 +202,9 @@
   
   // Reactive declarations for store values
   let hasSubmittedValue = false
-  let predictionsValue = []
+  let predictionsValue: Prediction[] = []
   let selectedDateString = ''
-  let labelPositions = []
+  let labelPositions: LabelPosition[] = []
   
   $: hasSubmitted.subscribe(value => {
     hasSubmittedValue = value
@@ -211,8 +226,8 @@
     selectedDateString = ''
   }
   
-  function handleDateInput(event) {
-    const inputDate = event.target.value
+  function handleDateInput(event: Event) {
+    const inputDate = (event.target as HTMLInputElement).value
     if (inputDate) {
       selectedDate = new Date(inputDate + 'T12:00:00') // Set to noon to avoid timezone issues
     }
@@ -369,8 +384,10 @@
             <div 
               class="prediction-label"
               style="left: {pos.x - 60}px; top: {pos.y}px"
+              role="button"
+              tabindex="0"
               on:mouseenter={() => {
-                const arrow = document.querySelector(`#arrow-${pos.id}`)
+                const arrow = document.querySelector(`#arrow-${pos.id}`) as HTMLElement
                 if (arrow) {
                   arrow.style.stroke = '#059669'
                   arrow.style.strokeWidth = '3'
@@ -378,7 +395,7 @@
                 }
               }}
               on:mouseleave={() => {
-                const arrow = document.querySelector(`#arrow-${pos.id}`)
+                const arrow = document.querySelector(`#arrow-${pos.id}`) as HTMLElement
                 if (arrow) {
                   arrow.style.stroke = '#10b981'
                   arrow.style.strokeWidth = '2'
@@ -394,7 +411,7 @@
             <div 
               class="timeline-point"
               style="left: {pos.x}px"
-            />
+            ></div>
           {/each}
         </div>
       </div>
@@ -710,21 +727,6 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
-  .results-section h2 {
-    color: #10b981;
-    text-align: center;
-    margin-bottom: 16px;
-    font-size: clamp(1.75rem, 4vw, 2.25rem);
-    font-weight: 700;
-  }
-  
-  .results-subtitle {
-    text-align: center;
-    color: #64748b;
-    margin-bottom: 40px;
-    font-size: 1.1rem;
-  }
-  
   .results-section .timeline-container {
     height: 450px;
     cursor: default;
@@ -852,12 +854,6 @@
     margin-top: 30px;
     padding-top: 20px;
     border-top: 1px solid #e2e8f0;
-  }
-  
-  .stats .note {
-    color: #64748b;
-    font-style: italic;
-    margin-top: 10px;
   }
   
   /* View results link */
