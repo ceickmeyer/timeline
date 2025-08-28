@@ -6,15 +6,15 @@
   import { browser } from '$app/environment'
 
   let name = ''
-  let selectedDate: Date | null = null
+  let selectedDate = null
   let showPredictions = false
-  let timelineContainer: HTMLElement | null = null
-  let resultsTimelineContainer: HTMLElement | null = null
+  let timelineContainer = null
+  let resultsTimelineContainer = null
   let timelineWidth = 800
   let isSubmitting = false
   let viewResultsClicked = false
   
-  // Timeline bounds d
+  // Timeline bounds
   const startDate = new Date()
   const endDate = new Date('2029-01-20') // Presidential inauguration date
   
@@ -46,7 +46,7 @@
     if (!browser) return
     
     const session = userSession
-    let sessionValue: string | null = null
+    let sessionValue = null
     const unsubscribe = session.subscribe(value => {
       sessionValue = value
     })
@@ -78,7 +78,7 @@
     }
   }
   
-  function handleTimelineClick(event: MouseEvent) {
+  function handleTimelineClick(event) {
     let hasSubmittedValue = false
     const unsubscribe = hasSubmitted.subscribe(value => {
       hasSubmittedValue = value
@@ -87,7 +87,7 @@
     
     if (hasSubmittedValue) return
     
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    const rect = event.currentTarget.getBoundingClientRect()
     const clickX = event.clientX - rect.left - 60 // Account for timeline padding
     const clickedDate = positionToDate(clickX, startDate, endDate, timelineWidth)
     
@@ -100,7 +100,7 @@
   async function submitPrediction() {
     if (!name.trim() || !selectedDate) return
     
-    let sessionValue: string | null = null
+    let sessionValue = null
     const unsubscribe = userSession.subscribe(value => {
       sessionValue = value
     })
@@ -130,23 +130,8 @@
     isSubmitting = false
   }
   
-  // Define types for prediction data
-  interface Prediction {
-    id?: string
-    name: string
-    prediction_date: string
-    user_session?: string
-  }
-  
-  interface LabelPosition {
-    prediction: Prediction
-    x: number
-    y: number
-    id: string
-  }
-  
   // Calculate non-overlapping positions for prediction labels
-  function calculateLabelPositions(predictionsArray: Prediction[]): LabelPosition[] {
+  function calculateLabelPositions(predictionsArray) {
     const sorted = [...predictionsArray].sort((a, b) => 
       new Date(a.prediction_date).getTime() - new Date(b.prediction_date).getTime()
     )
@@ -155,7 +140,7 @@
     const labelHeight = 50
     const minGap = 10
     const baseY = 80
-    const positions: LabelPosition[] = []
+    const positions = []
     
     sorted.forEach(prediction => {
       const x = dateToPosition(
@@ -202,9 +187,9 @@
   
   // Reactive declarations for store values
   let hasSubmittedValue = false
-  let predictionsValue: Prediction[] = []
+  let predictionsValue = []
   let selectedDateString = ''
-  let labelPositions: LabelPosition[] = []
+  let labelPositions = []
   
   $: hasSubmitted.subscribe(value => {
     hasSubmittedValue = value
@@ -226,8 +211,8 @@
     selectedDateString = ''
   }
   
-  function handleDateInput(event: Event) {
-    const inputDate = (event.target as HTMLInputElement).value
+  function handleDateInput(event) {
+    const inputDate = event.target.value
     if (inputDate) {
       selectedDate = new Date(inputDate + 'T12:00:00') // Set to noon to avoid timezone issues
     }
@@ -387,7 +372,7 @@
               role="button"
               tabindex="0"
               on:mouseenter={() => {
-                const arrow = document.querySelector(`#arrow-${pos.id}`) as HTMLElement
+                const arrow = document.querySelector(`#arrow-${pos.id}`)
                 if (arrow) {
                   arrow.style.stroke = '#059669'
                   arrow.style.strokeWidth = '3'
@@ -395,7 +380,7 @@
                 }
               }}
               on:mouseleave={() => {
-                const arrow = document.querySelector(`#arrow-${pos.id}`) as HTMLElement
+                const arrow = document.querySelector(`#arrow-${pos.id}`)
                 if (arrow) {
                   arrow.style.stroke = '#10b981'
                   arrow.style.strokeWidth = '2'
