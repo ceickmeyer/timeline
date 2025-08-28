@@ -14,7 +14,7 @@
   let isSubmitting = false
   let viewResultsClicked = false
   
-  // Timeline bounds
+  // Timeline bounds d
   const startDate = new Date()
   const endDate = new Date('2029-01-20') // Presidential inauguration date
   
