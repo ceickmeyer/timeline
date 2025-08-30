@@ -130,60 +130,57 @@
     isSubmitting = false
   }
   
-  // Calculate non-overlapping positions for prediction labels
-  function calculateLabelPositions(predictionsArray) {
-    const sorted = [...predictionsArray].sort((a, b) => 
-      new Date(a.prediction_date).getTime() - new Date(b.prediction_date).getTime()
-    )
+function calculateLabelPositions(predictionsArray) {
+  if (!predictionsArray.length) return []
+  
+  const sorted = [...predictionsArray].sort((a, b) => 
+    new Date(a.prediction_date).getTime() - new Date(b.prediction_date).getTime()
+  )
+  
+  const positions = []
+  const labelWidth = 120
+  const minHorizontalGap = 130 // Minimum horizontal distance between labels
+  const rowHeight = 50 // Vertical spacing between rows
+  const baseY = 0 // Starting Y position for first row
+  
+  sorted.forEach(prediction => {
+    const x = dateToPosition(
+      new Date(prediction.prediction_date + 'T12:00:00'),
+      startDate, endDate, timelineWidth
+    ) + 60
     
-    const labelWidth = 120
-    const labelHeight = 50
-    const minGap = 10
-    const baseY = 80
-    const positions = []
+    // Find appropriate row for this label
+    let row = 0
+    let placed = false
     
-    sorted.forEach(prediction => {
-      const x = dateToPosition(
-        new Date(prediction.prediction_date + 'T12:00:00'),
-        startDate, endDate, timelineWidth
-      ) + 60
+    while (!placed) {
+      const y = baseY + (row * rowHeight)
+      let canPlace = true
       
-      let y = baseY
-      let placed = false
-      let testY = baseY
-      
-      // Find non-overlapping Y position
-      while (!placed && testY < 300) {
-        let collision = false
-        
-        for (let pos of positions) {
-          const xDiff = Math.abs(x - pos.x)
-          const yDiff = Math.abs(testY - pos.y)
-          
-          if (xDiff < labelWidth && yDiff < labelHeight + minGap) {
-            collision = true
-            break
-          }
-        }
-        
-        if (!collision) {
-          y = testY
-          placed = true
-        } else {
-          testY += labelHeight + minGap
+      // Check if this position conflicts with existing labels in the same row
+      for (let pos of positions) {
+        if (pos.y === y && Math.abs(pos.x - x) < minHorizontalGap) {
+          canPlace = false
+          break
         }
       }
       
-      positions.push({ 
-        prediction, 
-        x, 
-        y,
-        id: prediction.id || `${prediction.name}-${prediction.prediction_date}`
-      })
-    })
-    
-    return positions
-  }
+      if (canPlace) {
+        positions.push({ 
+          prediction, 
+          x, 
+          y,
+          id: prediction.id || `${prediction.name}-${prediction.prediction_date}`.replace(/\s+/g, '-')
+        })
+        placed = true
+      } else {
+        row++
+      }
+    }
+  })
+  
+  return positions
+}
   
   // Reactive declarations for store values
   let hasSubmittedValue = false
@@ -346,22 +343,23 @@
           
           <!-- SVG for arrows -->
           <svg class="arrows-svg">
-            {#each labelPositions as pos, index}
-              {@const startY = pos.y + 45}
-              {@const endY = 370}
-              {@const controlX = pos.x + (index % 2 === 0 ? -20 : 20)}
-              {@const controlY = (startY + endY) / 2}
-              
-              <path 
-                d="M {pos.x} {startY} Q {controlX} {controlY} {pos.x} {endY}"
-                class="arrow-line"
-                id="arrow-{pos.id}"
-              />
-              <polygon 
-                points="{pos.x-4},{endY-5} {pos.x+4},{endY-5} {pos.x},{endY+3}"
-                class="arrow-head"
-              />
-            {/each}
+{#each labelPositions as pos, index}
+  {@const startY = pos.y + 45}
+  {@const endY = 470} <!-- Changed from 370 to 470 -->
+  {@const controlX = pos.x + (index % 2 === 0 ? -20 : 20)}
+  {@const controlY = (startY + endY) / 2}
+  
+  <path 
+    d="M {pos.x} {startY} Q {controlX} {controlY} {pos.x} {endY}"
+    class="arrow-line"
+    id="arrow-{pos.id}"
+  />
+  <polygon 
+    points="{pos.x-4},{endY-5} {pos.x+4},{endY-5} {pos.x},{endY+3}"
+    class="arrow-head"
+  />
+{/each}
+
           </svg>
           
           <!-- Prediction labels -->
@@ -713,7 +711,7 @@
   }
   
   .results-section .timeline-container {
-    height: 450px;
+    height: 550px;
     cursor: default;
     border-style: solid;
     border-color: #e2e8f0;
